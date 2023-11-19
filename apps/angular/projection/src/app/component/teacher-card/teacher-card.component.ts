@@ -1,35 +1,49 @@
 import { Component, OnInit } from '@angular/core';
-import { FakeHttpService } from '../../data-access/fake-http.service';
+import {
+  FakeHttpService,
+  randTeacher,
+} from '../../data-access/fake-http.service';
 import { TeacherStore } from '../../data-access/teacher.store';
-import { CardType } from '../../model/card.model';
-import { Teacher } from '../../model/teacher.model';
 import { CardComponent } from '../../ui/card/card.component';
+import { AsyncPipe, NgIf } from '@angular/common';
 
 @Component({
   selector: 'app-teacher-card',
-  template: `<app-card
-    [list]="teachers"
-    [type]="cardType"
-    customClass="bg-light-red"></app-card>`,
-  styles: [
-    `
-      ::ng-deep .bg-light-red {
-        background-color: rgba(250, 0, 0, 0.1);
-      }
-    `,
-  ],
+  template: ` <app-card
+    *ngIf="teachers$ | async as teachers"
+    [items]="teachers"
+    imageUrl="assets/img/teacher.png"
+    (add)="addTeacher()"
+    (delete)="delete($event)">
+    <ng-template #itemTemplate let-teacher>
+      {{ teacher.firstname }}
+    </ng-template>
+  </app-card>`,
+  styles: `
+    :host {
+      --card-background-color: #{rgba(250, 0, 0, 0.1)};
+    }
+  `,
   standalone: true,
-  imports: [CardComponent],
+  imports: [CardComponent, AsyncPipe, NgIf],
 })
 export class TeacherCardComponent implements OnInit {
-  teachers: Teacher[] = [];
-  cardType = CardType.TEACHER;
+  teachers$ = this.store.teachers$;
 
-  constructor(private http: FakeHttpService, private store: TeacherStore) {}
+  constructor(
+    private http: FakeHttpService,
+    private store: TeacherStore,
+  ) {}
 
-  ngOnInit(): void {
+  ngOnInit() {
     this.http.fetchTeachers$.subscribe((t) => this.store.addAll(t));
+  }
 
-    this.store.teachers$.subscribe((t) => (this.teachers = t));
+  addTeacher() {
+    this.store.addOne(randTeacher());
+  }
+
+  delete({ id }: { id: number }) {
+    this.store.deleteOne(id);
   }
 }
